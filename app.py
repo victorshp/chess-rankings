@@ -1,5 +1,6 @@
 from flask import Flask
 import requests
+import csv
 from datetime import datetime, timedelta
 from typing import Dict, Optional, List
 
@@ -48,6 +49,29 @@ def format_rating_history(history: Dict[str, int]) -> Dict[str, int]:
         formatted_history[date_str] = history.get(date.strftime('%Y-%m-%d'), history[list(history.keys())[-1]])
     return formatted_history
 
+def generate_rating_csv_for_top_50_classical_players() -> None:
+    top_50_players = get_top_players(50)
+    today = datetime.now().date()
+    date_headers = [(today - timedelta(days=i)).strftime('%Y-%m-%d') for i in range(29, -1, -1)]
+    headers = ['username'] + date_headers
+    
+    print("Starting to generate CSV...")
+    with open('top_50_classical_players_ratings.csv', 'w', newline='') as csvfile:
+        writer = csv.writer(csvfile)
+        writer.writerow(headers)
+        
+        for player in top_50_players:
+            history = get_rating_history(player)
+            if history:
+                row = [player]
+                for date in date_headers:
+                    row.append(history.get(date, ''))
+                writer.writerow(row)
+            else:
+                print(f"No rating history found for {player}")
+    
+    print("CSV file 'top_50_classical_players_ratings.csv' has been generated.")
+
 @app.route('/')
 def index():
     return "Welcome to the Chess Rankings App"
@@ -69,6 +93,11 @@ def top_player_rating_history():
     formatted_history = format_rating_history(history)
     print(f"{top_player}, {formatted_history}")
     return [f"{top_player}, {formatted_history}"]
+
+@app.route('/generate-csv')
+def generate_csv():
+    generate_rating_csv_for_top_50_classical_players()
+    return "CSV file has been generated. Check the server's root directory for 'top_50_classical_players_ratings.csv'."
 
 if __name__ == '__main__':
     app.run(debug=True)
